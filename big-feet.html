@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIG FEET | Bigfoot Sightings</title>
+    <meta name="description"
+        content="3,797 bigfoot sightings connected by paths through the wilderness.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Big Feet">
+    <meta property="og:description" content="3,797 bigfoot sightings connected by paths">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://dr.eamer.dev/datavis/poems/bigfoot/big-feet.html">
+    <meta property="og:image" content="https://dr.eamer.dev/datavis/poems/bigfoot/big-feet-social.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Big Feet">
+    <meta name="twitter:description" content="3,797 bigfoot sightings connected by paths">
+    <meta name="twitter:image" content="https://dr.eamer.dev/datavis/poems/bigfoot/big-feet-social.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0908;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .title {
+            position: fixed;
+            bottom: 24px;
+            right: 28px;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .title h1 {
+            font-size: 32px;
+            color: #c9a66b;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            margin: 0;
+            transition: color 0.3s ease;
+            text-shadow: 0 0 20px rgba(201, 166, 107, 0.5);
+        }
+
+        body:hover .title h1 {
+            color: #e8c078;
+        }
+
+        #canvas {
+            display: block;
+            cursor: grab;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: center center;
+            transform: rotate(-5deg);
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        #tooltip {
+            position: fixed;
+            background: rgba(15, 12, 10, 0.95);
+            border: 1px solid rgba(201, 166, 107, 0.4);
+            padding: 14px 18px;
+            color: #fff;
+            font-size: 11px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            min-width: 220px;
+            max-width: 350px;
+        }
+
+        .t-title {
+            font-weight: 600;
+            color: #e8c078;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #3d3530;
+            padding-bottom: 4px;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.4;
+        }
+
+        .t-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            color: #a89080;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.7rem;
+        }
+
+        .t-val {
+            color: #f0e6d8;
+            font-weight: 600;
+        }
+
+        .t-class {
+            display: inline-block;
+            padding: 0.2rem 0.4rem;
+            background: rgba(201, 166, 107, 0.2);
+            border-radius: 3px;
+            font-size: 0.65rem;
+            color: #c9a66b;
+            margin-top: 0.5rem;
+        }
+
+        /* Reveal Element - Base Pattern */
+        .reveal-element {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease, color 0.8s ease;
+            z-index: 50;
+        }
+
+        .reveal-element.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Question - Top Left */
+        .question-text {
+            position: fixed;
+            top: 24px;
+            left: 28px;
+            font-family: 'Inter', sans-serif;
+            font-size: 18px;
+            color: #3d3025;
+            text-align: left;
+            max-width: 350px;
+            transition: opacity 0.8s ease, color 0.8s ease;
+        }
+
+        .question-text.visible {
+            color: #e8dcc8;
+        }
+
+        .question-text .line-1 {
+            font-weight: 300;
+            margin-bottom: 4px;
+        }
+
+        .question-text .line-2 {
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* Axis Key - Integrated with Question */
+        .axis-key {
+            position: fixed;
+            top: 90px;
+            left: 28px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: #3d3025;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: opacity 0.8s ease, color 0.8s ease;
+        }
+
+        .axis-key.visible {
+            color: #b8a890;
+        }
+
+        .axis-key .key-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .axis-key .trail-line {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* Footer Links - Bottom Left */
+        .footer-links {
+            position: fixed;
+            bottom: 24px;
+            left: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .footer-links a {
+            color: #5a4a3a;
+            text-decoration: none;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #e8c078;
+        }
+
+        /* Loading Indicator */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0a0908;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: #c9a66b;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            background: #c9a66b;
+            border-radius: 50%;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .question-text {
+                top: 12px;
+                left: 12px;
+                font-size: 13px;
+                max-width: 180px;
+            }
+
+            .question-text .line-2 {
+                margin-bottom: 12px;
+            }
+
+            .axis-key {
+                top: 60px;
+                left: 12px;
+                font-size: 10px;
+                gap: 4px;
+            }
+
+            .axis-key .trail-line {
+                width: 18px;
+            }
+
+            .footer-links {
+                bottom: 12px;
+                left: 12px;
+                gap: 8px;
+            }
+
+            .footer-links a {
+                font-size: 11px;
+            }
+
+            .title {
+                bottom: 12px;
+                right: 12px;
+            }
+
+            .title h1 {
+                font-size: 18px;
+                letter-spacing: 2px;
+            }
+
+            #tooltip {
+                font-size: 10px;
+                min-width: 140px;
+                max-width: 280px;
+                padding: 10px 12px;
+            }
+
+            .t-title {
+                font-size: 12px;
+            }
+        }
+
+        /* Small mobile */
+        @media (max-width: 480px) {
+            .question-text {
+                top: 8px;
+                left: 8px;
+                font-size: 12px;
+                max-width: 160px;
+            }
+
+            .axis-key {
+                top: 50px;
+                left: 8px;
+                font-size: 9px;
+            }
+
+            .footer-links {
+                bottom: 8px;
+                left: 8px;
+            }
+
+            .title {
+                bottom: 8px;
+                right: 8px;
+            }
+
+            .title h1 {
+                font-size: 16px;
+                letter-spacing: 1px;
+            }
+
+            #tooltip {
+                font-size: 9px;
+                min-width: 160px;
+                max-width: 240px;
+                padding: 8px 10px;
+            }
+
+            .t-title {
+                font-size: 11px;
+            }
+        }
+
+        /* Touch device adjustments */
+        @media (hover: none) and (pointer: coarse) {
+            .reveal-element {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #canvas {
+                cursor: default;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Indicator -->
+    <div class="loading" id="loading">
+        <div class="loading-text">Tracking paths</div>
+        <div class="loading-dots">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+        </div>
+    </div>
+
+    <!-- Question - Top Left -->
+    <div class="question-text reveal-element" id="question-text">
+        <div class="line-1">What paths do they walk</div>
+        <div class="line-2">through the wilderness?</div>
+    </div>
+
+    <!-- Axis Key - Below Question -->
+    <div class="axis-key reveal-element" id="axis-key">
+        <div class="key-item"><span class="trail-line" style="background: #90ee90;"></span><span>visual encounters</span></div>
+        <div class="key-item"><span class="trail-line" style="background: #228b22;"></span><span>indirect evidence</span></div>
+        <div class="key-item"><span class="trail-line" style="background: #20b2aa;"></span><span>second-hand reports</span></div>
+    </div>
+
+    <!-- Footer Links - Bottom Left -->
+    <div class="footer-links reveal-element" id="footer-links">
+        <a href="big-foot.html">view footprints</a>
+        <a href="https://dr.eamer.dev/datavis/poems/" target="_blank">more poems</a>
+    </div>
+
+    <div class="title">
+        <h1>BIG FEET</h1>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const loading = document.getElementById('loading');
+
+        let width, height;
+        let allData = [];
+        let trails = [];
+        let simulationTime = 0;
+
+        let mouseX = -1000, mouseY = -1000;
+        let hoveredPoint = null;
+
+        // Zoom state
+        let currentTransform = d3.zoomIdentity;
+
+        const colors = {
+            'Class A': '#90ee90',  // Light green (visual encounters)
+            'Class B': '#228b22',  // Forest green (indirect evidence)
+            'Class C': '#20b2aa'   // Teal (second-hand reports)
+        };
+
+        async function init() {
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = Math.ceil(width * window.devicePixelRatio);
+                canvas.height = Math.ceil(height * window.devicePixelRatio);
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            }
+            window.addEventListener('resize', () => { resize(); updateScales(); buildTrails(); });
+            resize();
+
+            // Setup zoom - min scale 1 (current view), max scale 5
+            const zoom = d3.zoom()
+                .scaleExtent([1, 5])
+                .on('zoom', (event) => {
+                    currentTransform = event.transform;
+                });
+
+            d3.select(canvas).call(zoom);
+
+            try {
+                const response = await fetch('data/bigfoot.json');
+                allData = await response.json();
+
+                updateScales();
+                buildTrails();
+
+                // Hide loading indicator
+                loading.classList.add('hidden');
+                setTimeout(() => { loading.style.display = 'none'; }, 500);
+
+                requestAnimationFrame(render);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                loading.querySelector('.loading-text').textContent = 'Error loading data';
+            }
+        }
+
+        let projection;
+
+        function updateScales() {
+            // Responsive padding - symmetric/centered
+            const pad = width < 480 ? 40 : width < 768 ? 60 : 80;
+            const padLeft = pad;
+            const padRight = pad;
+            const padTop = pad;
+            const padBottom = pad;
+
+            // Use Albers USA projection for accurate US geography
+            projection = d3.geoAlbersUsa()
+                .fitExtent(
+                    [[padLeft, padTop], [width - padRight, height - padBottom]],
+                    {
+                        type: "FeatureCollection",
+                        features: allData.map(d => ({
+                            type: "Feature",
+                            geometry: { type: "Point", coordinates: [d.lon, d.lat] }
+                        }))
+                    }
+                );
+
+            allData.forEach(d => {
+                const projected = projection([d.lon, d.lat]);
+                if (projected) {
+                    d.x = projected[0];
+                    d.y = projected[1];
+                } else {
+                    // Points outside US (Canada) - use simple fallback
+                    d.x = -1000;
+                    d.y = -1000;
+                }
+            });
+
+            // Filter out points that couldn't be projected
+            allData = allData.filter(d => d.x > 0 && d.y > 0);
+        }
+
+        function kMeansClustering(points, k) {
+            if (points.length === 0) return [];
+
+            const centroids = [];
+            const shuffled = [...points].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < k; i++) {
+                if (shuffled[i]) {
+                    centroids.push({ x: shuffled[i].x, y: shuffled[i].y });
+                }
+            }
+
+            let clusters = [];
+            for (let iter = 0; iter < 10; iter++) {
+                clusters = Array(k).fill(null).map(() => []);
+                points.forEach(point => {
+                    let minDist = Infinity;
+                    let minIdx = 0;
+                    centroids.forEach((centroid, idx) => {
+                        const dist = Math.hypot(point.x - centroid.x, point.y - centroid.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            minIdx = idx;
+                        }
+                    });
+                    clusters[minIdx].push(point);
+                });
+
+                clusters.forEach((cluster, idx) => {
+                    if (cluster.length > 0) {
+                        const avgX = d3.mean(cluster, d => d.x);
+                        const avgY = d3.mean(cluster, d => d.y);
+                        centroids[idx] = { x: avgX, y: avgY };
+                    }
+                });
+            }
+
+            return clusters;
+        }
+
+        function greedyPathSort(points) {
+            if (points.length <= 1) return points;
+
+            const sorted = [points[0]];
+            const remaining = new Set(points.slice(1));
+
+            while (remaining.size > 0) {
+                const current = sorted[sorted.length - 1];
+                let nearest = null;
+                let minDist = Infinity;
+
+                remaining.forEach(point => {
+                    const dist = Math.hypot(point.x - current.x, point.y - current.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = point;
+                    }
+                });
+
+                if (nearest) {
+                    sorted.push(nearest);
+                    remaining.delete(nearest);
+                }
+            }
+
+            return sorted;
+        }
+
+        function buildTrails() {
+            const k = 30; // Number of trail clusters
+            const clusters = kMeansClustering(allData, k);
+
+            trails = clusters.map(cluster => {
+                if (cluster.length === 0) return null;
+
+                const sortedCluster = greedyPathSort(cluster);
+
+                const classifications = sortedCluster.map(d => d.classification);
+                const classCount = {};
+                classifications.forEach(c => {
+                    classCount[c] = (classCount[c] || 0) + 1;
+                });
+                const dominantClass = Object.keys(classCount).reduce((a, b) =>
+                    classCount[a] > classCount[b] ? a : b
+                );
+
+                return {
+                    points: sortedCluster,
+                    color: colors[dominantClass],
+                    classification: dominantClass,
+                    thickness: Math.log(sortedCluster.length + 1) * 0.8,
+                    phase: Math.random() * Math.PI * 2
+                };
+            }).filter(t => t !== null);
+        }
+
+        function render(time) {
+            simulationTime = time * 0.001;
+
+            // Dark wilderness background
+            ctx.fillStyle = '#0a0908';
+            ctx.fillRect(0, 0, width, height);
+
+            // Save context and apply zoom transform
+            ctx.save();
+            ctx.translate(currentTransform.x, currentTransform.y);
+            ctx.scale(currentTransform.k, currentTransform.k);
+
+            // Subtle topographic contour effect - warm earth tones
+            ctx.strokeStyle = 'rgba(80, 60, 40, 0.04)';
+            ctx.lineWidth = 1 / currentTransform.k;
+            for (let i = 0; i < 12; i++) {
+                const offset = i * 70;
+                ctx.beginPath();
+                for (let x = 0; x <= width; x += 20) {
+                    const y = height / 2 + Math.sin(x * 0.008 + i * 0.5 + simulationTime * 0.1) * 25 + offset - 300;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Transform mouse coordinates to data space for hit testing
+            const transformedMouseX = (mouseX - currentTransform.x) / currentTransform.k;
+            const transformedMouseY = (mouseY - currentTransform.y) / currentTransform.k;
+
+            let closestDist = 15 / currentTransform.k;
+            let closestPoint = null;
+
+            // Draw trails - thin white lines
+            trails.forEach(trail => {
+                if (trail.points.length < 2) return;
+
+                ctx.strokeStyle = '#ffffff';  // White trails
+                ctx.lineWidth = (trail.thickness * 0.4 + 0.5) / currentTransform.k;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 0.5;
+
+                ctx.beginPath();
+                ctx.moveTo(trail.points[0].x, trail.points[0].y);
+
+                for (let i = 1; i < trail.points.length - 1; i++) {
+                    const p0 = trail.points[i];
+                    const p1 = trail.points[i + 1];
+                    const cpx = (p0.x + p1.x) / 2;
+                    const cpy = (p0.y + p1.y) / 2;
+                    ctx.quadraticCurveTo(p0.x, p0.y, cpx, cpy);
+                }
+
+                const lastPoint = trail.points[trail.points.length - 1];
+                ctx.lineTo(lastPoint.x, lastPoint.y);
+                ctx.stroke();
+
+                // Draw points - colored by individual classification
+                ctx.globalAlpha = 1;
+                trail.points.forEach(point => {
+                    const dx = transformedMouseX - point.x;
+                    const dy = transformedMouseY - point.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closestPoint = point;
+                    }
+
+                    ctx.beginPath();
+                    ctx.fillStyle = colors[point.classification] || '#90ee90';
+                    ctx.arc(point.x, point.y, 3 / currentTransform.k, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+
+            ctx.globalAlpha = 1;
+
+            if (closestPoint) {
+                hoveredPoint = closestPoint;
+
+                // Highlight ring - no blur
+                ctx.strokeStyle = '#f0e6d8';
+                ctx.lineWidth = 2 / currentTransform.k;
+                ctx.beginPath();
+                ctx.arc(closestPoint.x, closestPoint.y, 7 / currentTransform.k, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Transform point back to screen coords for tooltip
+                const screenX = closestPoint.x * currentTransform.k + currentTransform.x;
+                const screenY = closestPoint.y * currentTransform.k + currentTransform.y;
+                showTooltip(closestPoint, screenX, screenY);
+                showRevealElements();
+            } else {
+                if (hoveredPoint) {
+                    hideRevealElements();
+                }
+                hoveredPoint = null;
+                hideTooltip();
+            }
+
+            ctx.restore();
+
+            requestAnimationFrame(render);
+        }
+
+        const titleArea = document.querySelector('.title');
+        const revealElements = document.querySelectorAll('.reveal-element');
+        let isUILocked = false;
+        let hideTimeout = null;
+
+        function showRevealElements() {
+            if (hideTimeout) clearTimeout(hideTimeout);
+            revealElements.forEach(el => el.classList.add('visible'));
+        }
+
+        function hideRevealElements() {
+            if (!isUILocked) {
+                hideTimeout = setTimeout(() => {
+                    revealElements.forEach(el => el.classList.remove('visible'));
+                }, 2000);
+            }
+        }
+
+        revealElements.forEach(el => {
+            el.addEventListener('mouseenter', showRevealElements);
+            el.addEventListener('mouseleave', hideRevealElements);
+        });
+        titleArea.addEventListener('mouseenter', showRevealElements);
+        titleArea.addEventListener('mouseleave', hideRevealElements);
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Touch support for mobile
+        canvas.addEventListener('touchstart', handleTouch, { passive: true });
+        canvas.addEventListener('touchmove', handleTouch, { passive: true });
+
+        function handleTouch(e) {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                mouseX = touch.clientX;
+                mouseY = touch.clientY;
+                showRevealElements();
+            }
+        }
+
+        canvas.addEventListener('touchend', () => {
+            mouseX = -1000;
+            mouseY = -1000;
+            hideRevealElements();
+        });
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.footer-links') || e.target.closest('#tooltip')) return;
+            isUILocked = !isUILocked;
+            if (isUILocked) showRevealElements();
+            else hideRevealElements();
+        });
+
+        function showTooltip(d, x, y) {
+            const classLabel = {
+                'Class A': 'Visual Encounter',
+                'Class B': 'Indirect Evidence',
+                'Class C': 'Second-hand Report'
+            };
+
+            tooltip.innerHTML = `
+                <div class="t-title">${d.title || 'Unknown Sighting'}</div>
+                <div class="t-row"><span>Year</span> <span class="t-val">${d.year || 'Unknown'}</span></div>
+                <div class="t-row"><span>Location</span> <span class="t-val">${d.lat.toFixed(3)}, ${d.lon.toFixed(3)}</span></div>
+                <div class="t-class">${classLabel[d.classification] || d.classification}</div>
+            `;
+
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const isMobile = window.innerWidth <= 768;
+
+            let tx, ty;
+
+            if (isMobile) {
+                // On mobile, position above the point
+                ty = y - tooltipRect.height - 20;
+                tx = x - tooltipRect.width / 2;
+
+                // Keep tooltip in viewport horizontally
+                tx = Math.max(10, Math.min(tx, window.innerWidth - tooltipRect.width - 10));
+
+                // If would go off top, position below instead
+                if (ty < 10) {
+                    ty = y + 20;
+                }
+            } else {
+                // Desktop: position to the right
+                tx = x + 20;
+                ty = y + 20;
+
+                // Bounds checking for desktop
+                if (tx + tooltipRect.width > window.innerWidth - 10) {
+                    tx = x - tooltipRect.width - 20;
+                }
+                if (ty + tooltipRect.height > window.innerHeight - 10) {
+                    ty = y - tooltipRect.height - 20;
+                }
+                if (ty < 10) {
+                    ty = 10;
+                }
+            }
+
+            tooltip.style.left = `${tx}px`;
+            tooltip.style.top = `${ty}px`;
+            tooltip.style.opacity = 1;
+        }
+
+        function hideTooltip() {
+            tooltip.style.opacity = 0;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
