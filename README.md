@@ -1,5 +1,8 @@
 # BIGFOOT
 
+[![Live Site](https://img.shields.io/badge/live-dr.eamer.dev-00ffaa)](https://dr.eamer.dev/datavis/poems/bigfoot/)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 3,797 Bigfoot sightings from the BFRO database, drawn as footprints across North America. Two visualization styles show sighting patterns from 1869 to present.
 
 ## Visualizations
@@ -60,5 +63,8 @@ https://www.bfro.net/
 
 ## Author
 
-Luke Steuber
-https://lukesteuber.com
+Luke Steuber — [dr.eamer.dev](https://dr.eamer.dev) — [@lukesteuber.com](https://bsky.app/profile/lukesteuber.com)
+
+## License
+
+MIT
